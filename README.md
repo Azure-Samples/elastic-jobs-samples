@@ -1,10 +1,11 @@
 ---
 page_type: sample
 languages:
-- csharp
+- sql-server
+- azurepowershell
 products:
-- dotnet
-description: "Add 150 character max description"
+- Azure SQL DB
+description: "Elastic Jobs blog series code samples."
 urlFragment: "update-this-to-unique-url-stub"
 ---
 
