@@ -1,0 +1,39 @@
+$db = Get-azsqldatabase -ServerName <your-server-name> -DatabaseName <your-database-name>
+
+$jobAgent = $db | New-AzSqlElasticJobAgent -Name <agent-name> 
+
+$loginPasswordSecure1 = (ConvertTo-SecureString -String "<strong-password>" -AsPlainText -Force)
+$loginPasswordSecure2 = (ConvertTo-SecureString -String "<another-strong-password>" -AsPlainText -Force)
+$refreshCred = New-Object -TypeName "System.Management.Automation.PSCredential" -ArgumentList "<refresh-credential-name>", $loginPasswordSecure1
+$refreshCred = $jobAgent | New-AzSqlElasticJobCredential -Name "<refresh-credential-name>" -Credential $refreshCred
+$jobCred = New-Object -TypeName "System.Management.Automation.PSCredential" -ArgumentList "<job-credential-name>", $loginPasswordSecure2
+$jobCred = $jobAgent | New-AzSqlElasticJobCredential -Name "<job-credential-name>" -Credential $jobCred
+
+$jobAgent | New-AzSqlElasticJobTargetGroup -TargetGroupName <group-name>
+$tg = $jobAgent | Get-AzSqlElasticJobTargetGroup -TargetGroupName <group-name> 
+
+$tg | Add-AzSqlElasticJobTarget -ServerName elasticjobstargetserver -RefreshCredentialName refresh-credential-name
+
+$job = $ jobAgent | New-AzSqlElasticJob -Name demo123 
+
+$sqlText1 = "IF (CASE WHEN ( SELECT STATS_DATE([object_id], [stats_id]) FROM sys.stats where name = 'tStats' < DATEADD(day,-1, sysdatetime()) THEN 1 ELSE 0 END) = 1 UPDATE STATISTICS T(tStats)"
+
+$job | Add-AzSqlElasticJobStep -Name "step1" -TargetGroupName group-name -CredentialName job-credential-name -CommandText $sqlText1 
+
+
+$server = Get-AzSqlServer -ServerName yourservername
+$jobAgent = $server | Get-AzSqlElasticJobAgent
+$job = $jobAgent | Get-AzSqlElasticJob -Name demo1233
+
+$job | Start-AzSqlElasticJob 
+
+$je = $ jobAgent | Get-AzSqlElasticJobExecution -Count 10 
+
+$job | Set-AzSqlElasticJob -IntervalType Day -IntervalCount 1 -StartTime (Get-Date) -Enable
+
+
+$sqlText1 = "if not exists (select * from sys.Tables where object_id = object_id('T')) create table T (a int, b int)" 
+$js = $job | Get-AzSqlElasticJobStep -Name step1
+$js | Set-AzSqlElasticJobStep -CommandText $sqlText1
+
+$job | Start-AzSqlElasticJob 
