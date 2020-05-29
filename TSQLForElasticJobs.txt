@@ -1,32 +1,40 @@
 --You must have already created the Elastic Job Agent via the portal.
 
-CREATE MASTER KEY ENCRYPTION BY PASSWORD = 'password'
+CREATE MASTER KEY ENCRYPTION BY PASSWORD = 'password';
+go
 
 CREATE DATABASE SCOPED CREDENTIAL refreshcredential
 WITH IDENTITY = 'refreshcredential',
-SECRET = 'password1'
+SECRET = 'password1';
+go
 
 CREATE DATABASE SCOPED CREDENTIAL jobcredential
 WITH IDENTITY = 'jobcredential',
-SECRET = 'password2'
+SECRET = 'password2';
+go
 
-SELECT * FROM sys.database_scoped_credentials
+SELECT * FROM sys.database_scoped_credentials;
+go
 
-EXEC jobs.sp_add_target_group 'DemoGroup'
+EXEC jobs.sp_add_target_group 'DemoGroup';
+go
 
 -- Add a server target member
 EXEC jobs.sp_add_target_group_member
 'DemoGroup',
 @target_type = 'SqlServer',
 @refresh_credential_name='refreshcredential', --credential required to refresh the databases in server
-@server_name='elasticjobstargetserver.database.windows.net'
+@server_name='elasticjobstargetserver.database.windows.net';
+go
 
 --View the recently created target group and target group members
 SELECT * FROM jobs.target_groups WHERE target_group_name='DemoGroup';
 SELECT * FROM jobs.target_group_members WHERE target_group_name='DemoGroup';
+go
 
 --Add job for create table
-EXEC jobs.sp_add_job @job_name='demo123', @description='Demo job'
+EXEC jobs.sp_add_job @job_name='demo123', @description='Demo job';
+go
 
 -- Add job step for update statistics
 EXEC jobs.sp_add_jobstep @job_name='demo123',
@@ -39,26 +47,31 @@ END) = 1
 UPDATE STATISTICS T(tStats);',
 @credential_name='jobcredential'
 @target_group_name='DemoGroup
-
+go
 
 SELECT * FROM jobs.jobs WHERE job_name = ‘demo123’
-
+go
 
 EXEC jobs.sp_start_job 'demo123'
+go
 
 EXEC jobs.sp_update_job
 @job_name = 'demo123',
 @enabled=1,
 @schedule_interval_type='day',
 @schedule_interval_cout=1
+go
 
 SELECT * FROM jobs.jobs WHERE job_name = 'demo123'
+go
 
 SELECT *  
 FROM jobs.job_executions  
 WHERE job_name = 'demo123'
 ORDER BY start_time DESC 
+go
 
 SELECT last_message  
 FROM jobs.job_executions 
 WHERE job_name = 'demo123' AND step_name <> 'NULL'
+go
