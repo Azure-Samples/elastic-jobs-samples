@@ -1,0 +1,64 @@
+--You must have already created the Elastic Job Agent via the portal.
+
+CREATE MASTER KEY ENCRYPTION BY PASSWORD = 'password'
+
+CREATE DATABASE SCOPED CREDENTIAL refreshcredential
+WITH IDENTITY = 'refreshcredential',
+SECRET = 'password1'
+
+CREATE DATABASE SCOPED CREDENTIAL jobcredential
+WITH IDENTITY = 'jobcredential',
+SECRET = 'password2'
+
+SELECT * FROM sys.database_scoped_credentials
+
+EXEC jobs.sp_add_target_group 'DemoGroup'
+
+-- Add a server target member
+EXEC jobs.sp_add_target_group_member
+'DemoGroup',
+@target_type = 'SqlServer',
+@refresh_credential_name='refreshcredential', --credential required to refresh the databases in server
+@server_name='elasticjobstargetserver.database.windows.net'
+
+--View the recently created target group and target group members
+SELECT * FROM jobs.target_groups WHERE target_group_name='DemoGroup';
+SELECT * FROM jobs.target_group_members WHERE target_group_name='DemoGroup';
+
+--Add job for create table
+EXEC jobs.sp_add_job @job_name='demo123', @description='Demo job'
+
+-- Add job step for update statistics
+EXEC jobs.sp_add_jobstep @job_name='demo123',
+@command= 'I
+(CASE
+WHEN (SELECT STATS_DATE([object_id], [stats_id]) FROM sys.stats WHERE name = 'tStats') < DATEADD(day,-1, sysdatetime())
+THEN 1
+ELSE 0
+END) = 1
+UPDATE STATISTICS T(tStats);',
+@credential_name='jobcredential'
+@target_group_name='DemoGroup
+
+
+SELECT * FROM jobs.jobs WHERE job_name = ‘demo123’
+
+
+EXEC jobs.sp_start_job 'demo123'
+
+EXEC jobs.sp_update_job
+@job_name = 'demo123',
+@enabled=1,
+@schedule_interval_type='day',
+@schedule_interval_cout=1
+
+SELECT * FROM jobs.jobs WHERE job_name = 'demo123'
+
+SELECT *  
+FROM jobs.job_executions  
+WHERE job_name = 'demo123'
+ORDER BY start_time DESC 
+
+SELECT last_message  
+FROM jobs.job_executions 
+WHERE job_name = 'demo123' AND step_name <> 'NULL'
